@@ -22,6 +22,7 @@ const bulkSaveBtn = $('bulk-save');
 const openBtn = $('open-btn');
 const toastEl = $('toast');
 const spreadBtn = $('bulk-spread');
+const centerBtn = $('center-scene');
 const selCountEl = $('sel-count');
 const resetViewBtn = $('reset-view');
 const rotateBtns = { x: $('rot-x'), y: $('rot-y'), z: $('rot-z') };
@@ -421,6 +422,22 @@ function spreadSelected() {
   resetView();
 }
 
+// Shift every object (selected or not) by the same XY amount so the combined bounding
+// box of the whole scene is centred on the plate. Relative positions are preserved.
+function centerScene() {
+  if (!objects.length) return;
+  const box = new THREE.Box3();
+  for (const o of objects) box.union(o.bbox);
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+  for (const o of objects) {
+    o.offset.x -= center.x;
+    o.offset.y -= center.y;
+    updateTransform(o);
+  }
+  resetView();
+}
+
 // --- geometry helpers --------------------------------------------------------
 
 // Wireframe box around the object's bounds with a size label on one edge per axis.
@@ -577,11 +594,13 @@ function renderList() {
     b.disabled = n === 0;
   }
   bulkSaveBtn.disabled = n === 0 || !CAN_SAVE;
+  centerBtn.disabled = objects.length === 0;
 }
 
 bulkDeleteBtn.addEventListener('click', deleteSelected);
 bulkToggleBtn.addEventListener('click', toggleSelectedVisibility);
 spreadBtn.addEventListener('click', spreadSelected);
+centerBtn.addEventListener('click', centerScene);
 for (const [axis, btn] of Object.entries(rotateBtns)) {
   btn.addEventListener('click', () => rotateSelected(axis, 90));
 }
@@ -1020,6 +1039,7 @@ window.stlKit = {
   setPosition,
   setScale,
   spreadSelected,
+  centerScene,
   deleteSelected,
   exportStl,
   isDirty,

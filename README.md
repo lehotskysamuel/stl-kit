@@ -1,41 +1,67 @@
 # STL Kit
 
-Browser-based STL viewer built with [Three.js](https://threejs.org/) and Vite.
+A small, browser-only viewer and prep tool for STL files, aimed at 3D printing.
 
-- Drag and drop one or more `.stl` files anywhere in the window (or use **Open STL…**).
-- Drag with the mouse to orbit, scroll to zoom, right-drag to pan.
-- The left sidebar lists loaded objects with their bounding-box size in millimetres,
-  shown as `X × Y × Z` (left-to-right × front-to-back × bottom-to-top), using the
-  slicer convention that STL units are millimetres and Z is up. Each object also gets a
-  wireframe box with dimension labels in the 3D view.
-- Select objects in the sidebar (Cmd/Ctrl-click or Shift-click for several), then use the
-  icon toolbar (hover for labels): **Hide/Show**, **Delete**, **Spread** (move the
-  selection next to the other objects so nothing overlaps), **Rotate…** (exact angles),
-  **Move…** (footprint centre X/Y and bottom height Z in mm), **Scale…** (percent per
-  axis, uniform by default, relative to the original file size or to the current size),
-  and **X/Y/Z 90°** quick rotates about the world axes. Dialogs preview live; Cancel or
-  Escape restores the previous state.
-- **Save** (green) writes the selected objects back to their original files as binary STL
-  with the current rotation, scale and position baked in. A confirmation dialog lists the
-  files and warns about overwriting; the browser then asks for write permission per file.
-  This uses the File System Access API, so it works in Chrome and Edge for files that were
-  dropped in or opened with the **Open STL…** picker. Firefox and Safari cannot write back.
+**Live app:** https://lehotskysamuel.github.io/stl-kit/
+
+## What it is for
+
+When you download a model for printing you often want to answer a few quick questions
+before opening a slicer: what does it look like, how big is it in millimetres, which way
+up should it go, does it need scaling, and does it fit next to the other parts? STL Kit
+does exactly that in a browser tab, with no install and no upload. Files are read and
+written entirely on your machine.
+
+- Drop one or more `.stl` files into the window (or use **Open STL…**) and orbit around
+  them with the mouse: left-drag rotates, scroll zooms, right-drag pans.
+- Every object gets a wireframe bounding box with its dimensions in mm, shown as
+  `X × Y × Z` (left-to-right × front-to-back × bottom-to-top), using the slicer
+  convention that STL units are millimetres and Z is up. Objects are placed resting on
+  the build plate.
+- The sidebar lists loaded objects. Select one or several (Cmd/Ctrl-click, Shift-click)
+  and use the toolbar to hide/show, delete, spread them apart so nothing overlaps,
+  rotate by 90° about X, Y or Z, or open the **Rotate…**, **Move…** and **Scale…**
+  dialogs for exact values with live preview. **Center** shifts the whole scene, every
+  object together, so it sits centred on the plate.
+- **Save** (green) writes the selected objects back to their original files as binary
+  STL with the current rotation, scale and position baked in, after a confirmation that
+  lists the files and warns about overwriting. This relies on the File System Access
+  API, so it works in Chrome and Edge; Firefox and Safari can view but not write back.
 - Keyboard: `Space` hide/show, `Delete` delete, `Backspace` reset view, `Esc` clear
   selection, `a` select all.
 
-## Run
+A note on units: STL files carry no unit information. STL Kit, like every slicer,
+reports the raw numbers as millimetres. If a model was authored in centimetres it will
+show ten times too small; use **Scale…** at 1000 % or scale it in your slicer.
+
+## How it is built
+
+Plain JavaScript with [Three.js](https://threejs.org/) for rendering and
+[Vite](https://vite.dev/) for bundling. STL parsing and export run in a Web Worker so the
+UI stays responsive with multi-million-triangle files. There is no backend. Pushes to
+`main` are built and deployed to GitHub Pages by the workflow in
+`.github/workflows/deploy.yml`.
+
+## Local development
+
+Requires [Node.js](https://nodejs.org/) 20 or newer.
 
 ```bash
+git clone git@github.com:lehotskysamuel/stl-kit.git
+cd stl-kit
 npm install
 npm run dev
 ```
 
-Then open the URL Vite prints (default http://localhost:5173).
+Then open the URL Vite prints (http://localhost:5173 by default). Edits reload
+automatically.
 
-## Build
+To check the production build locally:
 
 ```bash
 npm run build
+npm run preview
 ```
 
-The static site is written to `dist/`.
+The preview serves the built site at http://localhost:4173/stl-kit/ (the same base path
+GitHub Pages uses).
