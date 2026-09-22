@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>STL Kit</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar">
+        <header class="sidebar-header">
+          <h1>STL Kit</h1>
+          <button id="open-btn" class="open-btn" type="button">Open STL…</button>
+          <input id="file-input" type="file" accept=".stl" multiple hidden />
+        </header>
+        <div class="toolbar">
+          <div class="toolbar-row">
+            <button id="bulk-toggle" class="icon-btn" disabled data-tip="Hide selected (Space)" aria-label="Hide selected">
+              <span class="icon-eye"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span>
+              <span class="icon-eye-off" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.9 17.9A10.5 10.5 0 0 1 12 19c-6.5 0-10-7-10-7a17.6 17.6 0 0 1 4.1-4.9"/><path d="M9.9 5.2A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17.7 17.7 0 0 1-2.2 3"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/><path d="M2 2l20 20"/></svg></span>
+            </button>
+
+            <button id="bulk-delete" class="icon-btn icon-btn-danger" disabled data-tip="Delete selected (Delete)" aria-label="Delete selected">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+            </button>
+            <button id="bulk-save" class="icon-btn icon-btn-save" disabled data-tip="Save changes to the original files…" aria-label="Save changes to the original files">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+            </button>
+            <span id="sel-count" class="sel-count"></span>
+          </div>
+          <div class="toolbar-row">
+            <button id="rot-x" class="icon-btn axis-x" disabled data-tip="Rotate 90° about X" aria-label="Rotate 90° about X"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.5A9 9 0 1 1 18.4 6"/><path d="M19 2v4.5h-4.5"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor" stroke="none">X</text></svg></button>
+
+            <button id="rot-y" class="icon-btn axis-y" disabled data-tip="Rotate 90° about Y" aria-label="Rotate 90° about Y"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.5A9 9 0 1 1 18.4 6"/><path d="M19 2v4.5h-4.5"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor" stroke="none">Y</text></svg></button>
+
+            <button id="rot-z" class="icon-btn axis-z" disabled data-tip="Rotate 90° about Z" aria-label="Rotate 90° about Z"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.5A9 9 0 1 1 18.4 6"/><path d="M19 2v4.5h-4.5"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor" stroke="none">Z</text></svg></button>
+
+            <button id="open-rotate" class="icon-btn" disabled data-tip="Rotate by exact angles…" aria-label="Rotate by exact angles">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/></svg>
+            </button>
+          </div>
+          <div class="toolbar-row">
+            <button id="bulk-spread" class="icon-btn" disabled data-tip="Spread: move selected next to the others" aria-label="Spread selected">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M7 12H2M17 12h5"/><path d="M4.5 9.5 2 12l2.5 2.5M19.5 9.5 22 12l-2.5 2.5"/></svg>
+            </button>
+
+            <button id="open-move" class="icon-btn" disabled data-tip="Move to exact position…" aria-label="Move to exact position">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3"/><path d="M2 12h20M12 2v20"/></svg>
+            </button>
+
+            <button id="open-scale" class="icon-btn" disabled data-tip="Scale…" aria-label="Scale">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6"/><path d="M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+        <ul id="object-list" class="object-list"></ul>
+        <p id="empty-hint" class="empty-hint">
+          Drop an <code>.stl</code> file anywhere in this window to load it.
+        </p>
+        <footer class="sidebar-footer">
+          <div><kbd>⌘</kbd>/<kbd>Ctrl</kbd>+click or <kbd>Shift</kbd>+click to select several</div>
+          <div><kbd>Space</kbd> hide/show · <kbd>Delete</kbd> delete · <kbd>Backspace</kbd> reset view</div>
+        </footer>
+      </aside>
+      <main id="viewport">
+        <canvas id="canvas"></canvas>
+        <div id="drop-overlay" class="drop-overlay" hidden>
+          <div class="drop-overlay-inner">Drop STL file to open</div>
+        </div>
+        <div id="loading" class="loading" hidden>
+          <div class="spinner" role="status" aria-label="Loading"></div>
+          <div id="loading-text" class="loading-text">Loading…</div>
+        </div>
+        <button id="reset-view" class="reset-view" title="Reset view (Backspace)">Reset view</button>
+        <div id="toast" class="toast" hidden></div>
+      </main>
+    </div>
+    <dialog id="rotate-dialog" class="dialog">
+      <form id="rotate-form" method="dialog">
+        <h2>Rotate</h2>
+        <p id="rotate-hint" class="dialog-hint"></p>
+        <div class="fields">
+          <label class="field"><span class="axis-tag axis-x">X</span><input name="x" type="number" step="any" value="0" /><span class="unit">°</span></label>
+          <label class="field"><span class="axis-tag axis-y">Y</span><input name="y" type="number" step="any" value="0" /><span class="unit">°</span></label>
+          <label class="field"><span class="axis-tag axis-z">Z</span><input name="z" type="number" step="any" value="0" /><span class="unit">°</span></label>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="toolbar-btn dialog-cancel">Cancel</button>
+          <button type="submit" value="apply" class="toolbar-btn toolbar-btn-primary">Apply</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="move-dialog" class="dialog">
+      <form id="move-form" method="dialog">
+        <h2>Move</h2>
+        <p id="move-hint" class="dialog-hint"></p>
+        <div class="fields">
+          <label class="field"><span class="axis-tag axis-x">X</span><input name="x" type="number" step="any" value="0" /><span class="unit">mm</span></label>
+          <label class="field"><span class="axis-tag axis-y">Y</span><input name="y" type="number" step="any" value="0" /><span class="unit">mm</span></label>
+          <label class="field"><span class="axis-tag axis-z">Z</span><input name="z" type="number" step="any" value="0" /><span class="unit">mm</span></label>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="toolbar-btn dialog-cancel">Cancel</button>
+          <button type="submit" value="apply" class="toolbar-btn toolbar-btn-primary">Apply</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="scale-dialog" class="dialog">
+      <form id="scale-form" method="dialog">
+        <h2>Scale</h2>
+        <p id="scale-hint" class="dialog-hint"></p>
+        <div class="dialog-options">
+          <label class="check"><input name="uniform" type="checkbox" checked /> Scale all 3 axes equally</label>
+          <label class="select-row">Percent
+            <select name="mode">
+              <option value="original">of the original size</option>
+              <option value="current">of the current size</option>
+            </select>
+          </label>
+        </div>
+        <div class="fields">
+          <label class="field"><span class="axis-tag axis-x">X</span><input name="x" type="number" step="any" value="0" /><span class="unit">%</span></label>
+          <label class="field"><span class="axis-tag axis-y">Y</span><input name="y" type="number" step="any" value="0" /><span class="unit">%</span></label>
+          <label class="field"><span class="axis-tag axis-z">Z</span><input name="z" type="number" step="any" value="0" /><span class="unit">%</span></label>
+        </div>
+        <p id="scale-result" class="dialog-result"></p>
+        <div class="dialog-actions">
+          <button type="button" class="toolbar-btn dialog-cancel">Cancel</button>
+          <button type="submit" value="apply" class="toolbar-btn toolbar-btn-primary">Apply</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="save-dialog" class="dialog">
+      <form id="save-form" method="dialog">
+        <h2>Save to original files</h2>
+        <p class="dialog-hint">
+          The current rotation, scale and position are baked into the geometry and written
+          back as binary STL.
+        </p>
+        <ul id="save-list" class="save-list"></ul>
+        <p class="dialog-warning">
+          ⚠ This <strong>overwrites the original files on disk</strong> and cannot be undone.
+          Your browser will ask for permission to write each file.
+        </p>
+        <div class="dialog-actions">
+          <button type="button" class="toolbar-btn dialog-cancel">Cancel</button>
+          <button id="save-confirm" type="submit" value="save" class="toolbar-btn toolbar-btn-save">Overwrite</button>
+        </div>
+      </form>
+    </dialog>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
