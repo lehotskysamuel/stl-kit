@@ -1,6 +1,7 @@
 // Parses and serialises STL files off the main thread so the UI stays responsive.
 import { Matrix4, Vector3 } from 'three';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { meshStats } from './mesh-stats.js';
 
 const loader = new STLLoader();
 
@@ -10,7 +11,7 @@ function parse(buffer) {
   const normal = geometry.getAttribute('normal')?.array ?? null;
   const transfer = [position.buffer];
   if (normal) transfer.push(normal.buffer);
-  return { result: { position, normal }, transfer };
+  return { result: { position, normal, stats: meshStats(position) }, transfer };
 }
 
 // Binary STL with the given matrix baked into every vertex; face normals recomputed.

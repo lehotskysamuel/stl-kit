@@ -27,6 +27,16 @@ written entirely on your machine.
   STL with the current rotation, scale and position baked in, after a confirmation that
   lists the files and warns about overwriting. This relies on the File System Access
   API, so it works in Chrome and Edge; Firefox and Safari can view but not write back.
+- Every object shows an estimated **material cost** for FDM and for resin side by side,
+  written as `0.42 € (max 0.61 €)`, with a total for all objects at the bottom of the
+  sidebar. Hover a price for the weight in grams (and ml for resin). The estimate
+  counts solid walls plus infill for FDM and a hollowed shell for resin, taking the wall
+  volume as surface area × wall thickness; the max is the whole model printed solid.
+  Both include a supports & waste allowance. The gear button next to the total opens
+  **Materials & prices**: common FDM filaments and resin types with their densities and
+  typical prices, the material used for each printer type, walls, infill and currency.
+  Settings are kept in the browser's local storage. The volume is only meaningful for
+  a closed mesh; objects with holes are flagged.
 - Keyboard: `Space` hide/show, `Delete` delete, `Backspace` reset view, `Esc` clear
   selection, `a` select all.
 

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { meshStats } from './mesh-stats.js';
+import { KINDS, MATERIALS, defaultSettings, estimate, loadSettings, materialName, saveSettings } from './pricing.js';
 
 // ---------------------------------------------------------------------------
 // Scene setup (Z-up, like slicers / 3D printers: X = left-right, Y = front-back,
@@ -27,6 +29,8 @@ const selCountEl = $('sel-count');
 const resetViewBtn = $('reset-view');
 const rotateBtns = { x: $('rot-x'), y: $('rot-y'), z: $('rot-z') };
 const dialogBtns = { rotate: $('open-rotate'), move: $('open-move'), scale: $('open-scale') };
+const costTotalEl = $('cost-total');
+const costTotalTitle = $('cost-total-title');
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -133,9 +137,10 @@ async function exportStl(obj) {
 // Object management
 // ---------------------------------------------------------------------------
 
-// { id, name, group, mesh, frame, bbox: Box3, size: Vector3, offset: Vector3, color, visible }
+// { id, name, group, mesh, frame, bbox: Box3, size: Vector3, offset: Vector3, color, visible, stats }
 // mesh.quaternion = orientation, mesh.scale = scale factors (1 = original file size),
-// offset = where the footprint centre (x, y) and the bottom face (z) sit on the plate.
+// offset = where the footprint centre (x, y) and the bottom face (z) sit on the plate,
+// stats = { volume, area, closed } of the geometry at the original file size.
 const objects = [];
 const selected = new Set(); // ids
 let lastClickedId = null;
@@ -152,7 +157,7 @@ function round2(v) {
 }
 
 async function addStl(name, arrayBuffer, handle = null) {
-  const { position, normal } = await parseStl(arrayBuffer);
+  const { position, normal, stats } = await parseStl(arrayBuffer);
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
@@ -193,6 +198,8 @@ async function addStl(name, arrayBuffer, handle = null) {
     visible: true,
     handle, // FileSystemFileHandle when the browser gave us one (drop / native picker)
     savedState: null, // transform as it is in the file on disk
+    stats,
+    areaCache: null, // { key, area } for the last non-uniform scale, see objectStats
   };
   markSaved(obj);
   objects.push(obj);
@@ -520,6 +527,86 @@ function resetView() {
 }
 
 // ---------------------------------------------------------------------------
+// Material cost
+// ---------------------------------------------------------------------------
+
+let pricing = loadSettings();
+const KIND_LABELS = { fdm: 'FDM', resin: 'Resin' };
+
+// Volume and surface area at the object's current scale. Rotation and position change
+// neither; scale multiplies the volume by sx·sy·sz and, when uniform, the area by s².
+// A non-uniform scale needs the area recomputed from the triangles (cached per scale).
+function objectStats(obj) {
+  const { x, y, z } = obj.mesh.scale;
+  const { volume, area, closed } = obj.stats;
+  const scaled = { volume: volume * Math.abs(x * y * z), area: area * x * x, closed };
+  if (x !== y || y !== z) {
+    const key = `${x},${y},${z}`;
+    if (obj.areaCache?.key !== key) {
+      const position = obj.mesh.geometry.getAttribute('position').array;
+      obj.areaCache = { key, area: meshStats(position, x, y, z).area };
+    }
+    scaled.area = obj.areaCache.area;
+  }
+  return scaled;
+}
+
+// { fdm, resin } estimates for one object with the selected materials.
+function objectCost(obj) {
+  const stats = objectStats(obj);
+  return Object.fromEntries(KINDS.map((kind) => [kind, estimate(kind, stats, pricing)]));
+}
+
+function sumEstimates(list) {
+  const total = { ml: 0, mlMax: 0, grams: 0, gramsMax: 0, cost: 0, costMax: 0 };
+  for (const e of list) for (const key in total) total[key] += e[key];
+  return total;
+}
+
+function formatMoney(v) {
+  return `${v.toFixed(2)} ${pricing.currency}`;
+}
+function formatAmount(v, unit) {
+  return `${v >= 100 ? Math.round(v) : v.toFixed(1)} ${unit}`;
+}
+
+// Label over "0.42 € (max 0.61 €)"; grams (and ml for resin) in the tooltip.
+function costCell(label, kind, e) {
+  const cell = document.createElement('div');
+  cell.className = 'cost-cell';
+  const head = document.createElement('div');
+  head.className = 'cost-kind';
+  head.textContent = label;
+  const value = document.createElement('span');
+  value.className = 'cost-value';
+  value.textContent = formatMoney(e.cost);
+  const max = document.createElement('span');
+  max.className = 'cost-max';
+  max.textContent = `(max ${formatMoney(e.costMax)})`;
+  cell.append(head, value, ' ', max);
+
+  const material = materialName(kind, pricing[kind].material);
+  const amount = (g, ml) => (kind === 'resin' ? `${formatAmount(g, 'g')} / ${formatAmount(ml, 'ml')}` : formatAmount(g, 'g'));
+  cell.title =
+    `${KIND_LABELS[kind]}, ${material}: about ${amount(e.grams, e.ml)}\n` +
+    `Printed solid: ${amount(e.gramsMax, e.mlMax)}`;
+  return cell;
+}
+
+function renderCostTotal(costs) {
+  costTotalEl.innerHTML = '';
+  costTotalEl.hidden = costs.length === 0;
+  costTotalTitle.textContent = costs.length
+    ? `Total, ${costs.length === 1 ? '1 object' : `all ${costs.length} objects`}`
+    : 'Material cost';
+  if (!costs.length) return;
+  for (const kind of KINDS) {
+    const label = `${KIND_LABELS[kind]} · ${materialName(kind, pricing[kind].material)}`;
+    costTotalEl.appendChild(costCell(label, kind, sumEstimates(costs.map((c) => c[kind]))));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Sidebar
 // ---------------------------------------------------------------------------
 
@@ -531,6 +618,7 @@ const ICON_EYE_OFF =
 function renderList() {
   listEl.innerHTML = '';
   emptyHint.hidden = objects.length > 0;
+  const costs = [];
 
   for (const o of objects) {
     const li = document.createElement('li');
@@ -555,6 +643,21 @@ function renderList() {
     dims.textContent = `${formatMm(o.size.x)} × ${formatMm(o.size.y)} × ${formatMm(o.size.z)} mm`;
 
     meta.append(nameEl, dims);
+    if (!o.stats.closed) {
+      const warn = document.createElement('div');
+      warn.className = 'object-warn';
+      warn.textContent = '⚠ Mesh has holes, cost is unreliable';
+      warn.title =
+        'The surface is not closed, so its volume cannot be measured reliably. ' +
+        'Repairing the mesh (most slicers can) gives a correct estimate.';
+      meta.appendChild(warn);
+    }
+
+    const cost = objectCost(o);
+    costs.push(cost);
+    const costRow = document.createElement('div');
+    costRow.className = 'cost-grid';
+    for (const kind of KINDS) costRow.appendChild(costCell(KIND_LABELS[kind], kind, cost[kind]));
 
     const eye = document.createElement('button');
     eye.className = 'object-btn object-eye';
@@ -575,10 +678,11 @@ function renderList() {
       removeObjects([o.id]);
     });
 
-    li.append(swatch, meta, eye, remove);
+    li.append(swatch, meta, eye, remove, costRow);
     li.addEventListener('click', (e) => handleItemClick(o, e));
     listEl.appendChild(li);
   }
+  renderCostTotal(costs);
 
   // Bulk toolbar state
   const sel = selectedObjects();
@@ -898,6 +1002,82 @@ saveDialog.addEventListener('close', () => {
   if (saveDialog.returnValue !== 'save') saveTargets = [];
 });
 
+// ---------------------------------------------------------------------------
+// Materials & prices dialog: the edits only take effect (and are stored) on Save
+// ---------------------------------------------------------------------------
+
+const pricingDialog = $('pricing-dialog');
+const pricingForm = $('pricing-form');
+
+// One row per preset: radio (the material the sidebar prices with), name, density, price.
+for (const kind of KINDS) {
+  const tbody = $(`${kind}-materials`);
+  for (const m of MATERIALS[kind]) {
+    const radioId = `${kind}-use-${m.id}`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="radio" name="${kind}-material" value="${m.id}" id="${radioId}" /></td>
+      <td><label for="${radioId}">${m.name}</label></td>
+      <td><input name="${kind}-density-${m.id}" type="number" step="any" min="0.1" max="25" required aria-label="${m.name} density" /></td>
+      <td><input name="${kind}-price-${m.id}" type="number" step="any" min="0" required aria-label="${m.name} price per kg" /></td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function updateCurrencyLabels() {
+  const currency = pricingForm.elements.currency.value.trim() || pricing.currency;
+  for (const el of pricingForm.querySelectorAll('.currency-label')) el.textContent = currency;
+}
+
+function fillPricingForm(settings) {
+  const el = pricingForm.elements;
+  el.currency.value = settings.currency;
+  for (const kind of KINDS) {
+    const cfg = settings[kind];
+    el[`${kind}-material`].value = cfg.material;
+    el[`${kind}-wall`].value = cfg.wall;
+    el[`${kind}-extra`].value = cfg.extra;
+    if ('infill' in cfg) el[`${kind}-infill`].value = cfg.infill;
+    for (const [id, m] of Object.entries(cfg.materials)) {
+      el[`${kind}-density-${id}`].value = m.density;
+      el[`${kind}-price-${id}`].value = m.price;
+    }
+  }
+  updateCurrencyLabels();
+}
+
+function readPricingForm() {
+  const el = pricingForm.elements;
+  const settings = defaultSettings();
+  settings.currency = el.currency.value.trim() || settings.currency;
+  for (const kind of KINDS) {
+    const cfg = settings[kind];
+    cfg.material = el[`${kind}-material`].value || cfg.material;
+    cfg.wall = num(el[`${kind}-wall`], cfg.wall);
+    cfg.extra = num(el[`${kind}-extra`], cfg.extra);
+    if ('infill' in cfg) cfg.infill = num(el[`${kind}-infill`], cfg.infill);
+    for (const [id, m] of Object.entries(cfg.materials)) {
+      m.density = num(el[`${kind}-density-${id}`], m.density);
+      m.price = num(el[`${kind}-price-${id}`], m.price);
+    }
+  }
+  return settings;
+}
+
+$('open-pricing').addEventListener('click', () => {
+  fillPricingForm(pricing);
+  pricingDialog.returnValue = '';
+  pricingDialog.showModal();
+});
+$('pricing-reset').addEventListener('click', () => fillPricingForm(defaultSettings()));
+pricingForm.elements.currency.addEventListener('input', updateCurrencyLabels);
+pricingForm.querySelector('.dialog-cancel').addEventListener('click', () => pricingDialog.close('cancel'));
+pricingForm.addEventListener('submit', () => {
+  pricing = readPricingForm();
+  saveSettings(pricing);
+  renderList();
+});
+
 // Buttons keep focus after a click; drop it so Space / Enter don't re-trigger them.
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('button');
@@ -1046,6 +1226,8 @@ window.stlKit = {
   markSaved,
   openSaveDialog,
   toggleSelectedVisibility,
+  objectStats,
+  objectCost,
   objects,
   selected,
 };

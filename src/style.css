@@ -73,9 +73,10 @@ html, body {
 #sidebar .object-list:empty { flex: 0; padding: 0; }
 
 .object-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: 0 10px;
   padding: 10px 10px;
   border-radius: 8px;
   cursor: pointer;
@@ -124,7 +125,53 @@ html, body {
 }
 .object-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
 .object-eye[aria-pressed="true"] { color: var(--text); }
-.object-item.hidden-object .object-meta { opacity: 0.45; }
+.object-item.hidden-object .object-meta,
+.object-item.hidden-object .cost-grid { opacity: 0.45; }
+
+.object-warn {
+  margin-top: 3px;
+  color: #f2c14f;
+  font-size: 12px;
+}
+
+/* Material cost: FDM and resin side by side, per object and as a total */
+.cost-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.cost-grid[hidden] { display: none; }
+.object-item > .cost-grid { grid-column: 2 / -1; margin-top: 6px; }
+.cost-cell { min-width: 0; cursor: help; }
+.cost-kind {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cost-value { white-space: nowrap; }
+.cost-max { color: var(--muted); white-space: nowrap; }
+
+.cost-summary {
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--panel-border);
+}
+.cost-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cost-summary-title { font-weight: 600; font-size: 13px; }
+.cost-summary .icon-btn[data-tip]::after { top: auto; bottom: calc(100% + 6px); left: auto; right: 0; }
+.cost-grid-total { margin-top: 8px; }
+.cost-grid-total .cost-value { font-size: 14px; font-weight: 600; }
 
 .label-layer {
   position: absolute;
@@ -343,6 +390,7 @@ html, body {
   line-height: 1.5;
 }
 .dialog { max-width: 440px; }
+.dialog.dialog-wide { max-width: min(860px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
 
 .toast {
   position: absolute;
@@ -465,3 +513,70 @@ kbd {
   font: inherit;
   font-size: 10px;
 }
+
+/* Materials & prices dialog */
+.pricing-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+}
+.pricing-kind {
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+}
+.pricing-kind legend { padding: 0 6px; font-weight: 600; font-size: 13px; }
+.material-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.material-table th {
+  padding: 0 4px 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+}
+.material-table td { padding: 2px 4px; }
+.material-table td:first-child { width: 22px; }
+.material-table td:nth-child(n + 3) { width: 72px; }
+.material-table label { display: block; cursor: pointer; }
+.material-table tr:has(input[type="radio"]:checked) label { color: var(--accent); font-weight: 600; }
+.material-table input[type="radio"] { margin: 0; accent-color: var(--accent); cursor: pointer; }
+.material-table input[type="number"],
+.param input {
+  width: 100%;
+  padding: 3px 6px;
+  background: #1e1f24;
+  border: 1px solid var(--panel-border);
+  border-radius: 5px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.material-table input:focus,
+.param input:focus { outline: none; border-color: var(--accent); }
+.material-table input:invalid,
+.param input:invalid { border-color: #e5534b; }
+.param-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 12px;
+}
+.param {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.param input { width: 62px; }
+.param-note { margin: 8px 0 0; color: var(--muted); font-size: 11px; }
+.param-currency { margin-top: 14px; }
+.dialog-actions-start { margin-right: auto; }

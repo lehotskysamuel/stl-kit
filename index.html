@@ -61,6 +61,15 @@
         <p id="empty-hint" class="empty-hint">
           Drop an <code>.stl</code> file anywhere in this window to load it.
         </p>
+        <section class="cost-summary" aria-label="Material cost">
+          <div class="cost-summary-head">
+            <span id="cost-total-title" class="cost-summary-title">Material cost</span>
+            <button id="open-pricing" class="icon-btn" type="button" data-tip="Materials & prices…" aria-label="Materials and prices">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+            </button>
+          </div>
+          <div id="cost-total" class="cost-grid cost-grid-total" hidden></div>
+        </section>
         <footer class="sidebar-footer">
           <div><kbd>⌘</kbd>/<kbd>Ctrl</kbd>+click or <kbd>Shift</kbd>+click to select several</div>
           <div><kbd>Space</kbd> hide/show · <kbd>Delete</kbd> delete · <kbd>Backspace</kbd> reset view</div>
@@ -149,6 +158,48 @@
         <div class="dialog-actions">
           <button type="button" class="toolbar-btn dialog-cancel">Cancel</button>
           <button id="save-confirm" type="submit" value="save" class="toolbar-btn toolbar-btn-save">Overwrite</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="pricing-dialog" class="dialog dialog-wide">
+      <form id="pricing-form" method="dialog">
+        <h2>Materials &amp; prices</h2>
+        <p class="dialog-hint">
+          The sidebar shows the estimated material cost and, in brackets, the maximum: the
+          whole model printed solid. Pick the material used for each printer type and adjust
+          prices to what you pay. Settings are stored in this browser.
+        </p>
+        <div class="pricing-columns">
+          <fieldset class="pricing-kind">
+            <legend>FDM (filament)</legend>
+            <table class="material-table">
+              <thead><tr><th></th><th>Material</th><th>g/cm³</th><th><span class="currency-label"></span>/kg</th></tr></thead>
+              <tbody id="fdm-materials"></tbody>
+            </table>
+            <div class="param-fields">
+              <label class="param" title="Perimeters × line width, e.g. 2 × 0.45 mm">Walls<input name="fdm-wall" type="number" step="any" min="0" max="50" required /><span class="unit">mm</span></label>
+              <label class="param">Infill<input name="fdm-infill" type="number" step="any" min="0" max="100" required /><span class="unit">%</span></label>
+              <label class="param" title="Added on top: supports, brim, purge lines, failed prints">Supports &amp; waste<input name="fdm-extra" type="number" step="any" min="0" max="500" required /><span class="unit">%</span></label>
+            </div>
+          </fieldset>
+          <fieldset class="pricing-kind">
+            <legend>Resin (SLA / MSLA)</legend>
+            <table class="material-table">
+              <thead><tr><th></th><th>Material</th><th>g/cm³</th><th><span class="currency-label"></span>/kg</th></tr></thead>
+              <tbody id="resin-materials"></tbody>
+            </table>
+            <div class="param-fields">
+              <label class="param" title="Wall thickness when the model is hollowed; 0 = print solid">Hollow walls<input name="resin-wall" type="number" step="any" min="0" max="50" required /><span class="unit">mm</span></label>
+              <label class="param" title="Added on top: supports, rafts, resin left on the part and in the vat">Supports &amp; waste<input name="resin-extra" type="number" step="any" min="0" max="500" required /><span class="unit">%</span></label>
+            </div>
+            <p class="param-note">Hollow walls 0 mm = print solid.</p>
+          </fieldset>
+        </div>
+        <label class="param param-currency">Currency<input name="currency" type="text" maxlength="4" required /></label>
+        <div class="dialog-actions">
+          <button id="pricing-reset" type="button" class="toolbar-btn dialog-actions-start">Reset to defaults</button>
+          <button type="button" class="toolbar-btn dialog-cancel">Cancel</button>
+          <button type="submit" value="apply" class="toolbar-btn toolbar-btn-primary">Save</button>
         </div>
       </form>
     </dialog>
